@@ -1119,8 +1119,14 @@ async def handle_completions_impl(api: str, request: Request):
                 released_kv = True
                 request_released = True
 
-        media_type = "text/event-stream; charset=utf-8" if stream_flag else "application/json"
-        return StreamingResponse(generate_stream(), media_type=media_type)
+        if stream_flag:
+            return StreamingResponse(generate_stream(), media_type="text/event-stream; charset=utf-8")
+        else:
+            # 非流式：收集所有 chunk，拼接完整 JSON，一次性返回
+            full_response = b""
+            async for chunk in generate_stream():
+                full_response += chunk
+            return Response(content=full_response, media_type="application/json")
     except Exception:
         import traceback
 
